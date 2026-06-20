@@ -26,7 +26,7 @@ from airflow.providers.amazon.aws.transfers.http_to_s3 import HttpToS3Operator
 
 # Define os caminhos absolutos para os arquivos de configuração
 DAGS_FOLDER = Path(__file__).parent
-CONFIG_PATH = DAGS_FOLDER.parent / "include" / "datasets.yaml"
+CONFIG_PATH = DAGS_FOLDER.parent / "include" / "nyc_tlc_datasets.yaml"
 
 config = {}
 try:
