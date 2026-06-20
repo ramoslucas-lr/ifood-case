@@ -1,0 +1,59 @@
+# This is a Declarative Automation Bundle definition for ifood-case.
+# The Databricks extension requires databricks.yml configuration file.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+
+bundle:
+  name: ifood-case
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-441c4e73-bb89.cloud.databricks.com
+
+  ## Optionally, there could be 'staging' or 'prod' targets here.
+  #
+  # prod:
+  #   workspace:
+  #     host: https://dbc-441c4e73-bb89.cloud.databricks.com
+
+resources:
+  jobs:
+    bronze_to_silver_pipeline:
+      name: "NYC TLC: Bronze to Silver Pipeline"
+      environments:
+        - environment_key: serverless_env
+          spec:
+            environment_version: "1"
+      parameters:
+        - name: "dataset"
+          default: "yellow_taxi"
+        - name: "ano"
+          default: "2023"
+        - name: "mes"
+          default: "01"
+        - name: "s3_bucket"
+          default: "ifood-case-lucas-datalake-762131618299-us-east-2-an"
+        - name: "bronze_prefix"
+          default: "bronze/nyc_tlc"
+        - name: "silver_prefix"
+          default: "silver/nyc_tlc"
+      tasks:
+        - task_key: "process_yellow_taxi"
+          environment_key: "serverless_env"
+          spark_python_task:
+            python_file: "src/databricks/bronze_to_silver_job.py"
+            parameters:
+              - "--dataset"
+              - "{{job.parameters.dataset}}"
+              - "--ano"
+              - "{{job.parameters.ano}}"
+              - "--mes"
+              - "{{job.parameters.mes}}"
+              - "--s3-bucket"
+              - "{{job.parameters.s3_bucket}}"
+              - "--bronze-prefix"
+              - "{{job.parameters.bronze_prefix}}"
+              - "--silver-prefix"
+              - "{{job.parameters.silver_prefix}}"
