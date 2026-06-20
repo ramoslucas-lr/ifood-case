@@ -57,3 +57,41 @@ resources:
               - "{{job.parameters.partition_keys}}"
               - "--partition-values"
               - "{{job.parameters.partition_values}}"
+
+    silver_to_gold_pipeline:
+      name: "NYC TLC: Silver to Gold Pipeline"
+      environments:
+        - environment_key: serverless_env
+          spec:
+            environment_version: "5"
+      parameters:
+        - name: "mart_name"
+          default: "monthly_revenue"
+        - name: "silver_path"
+          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/silver/nyc_tlc/yellow/"
+        - name: "gold_path"
+          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/gold/nyc_tlc/monthly_revenue/"
+        - name: "table_name"
+          default: "default.gold_nyc_tlc_monthly_revenue"
+        - name: "partition_keys"
+          default: "ano,mes"
+        - name: "partition_values"
+          default: "2023,01"
+      tasks:
+        - task_key: "process_data_mart"
+          environment_key: "serverless_env"
+          spark_python_task:
+            python_file: "src/databricks/silver_to_gold_job.py"
+            parameters:
+              - "--mart-name"
+              - "{{job.parameters.mart_name}}"
+              - "--silver-path"
+              - "{{job.parameters.silver_path}}"
+              - "--gold-path"
+              - "{{job.parameters.gold_path}}"
+              - "--table-name"
+              - "{{job.parameters.table_name}}"
+              - "--partition-keys"
+              - "{{job.parameters.partition_keys}}"
+              - "--partition-values"
+              - "{{job.parameters.partition_values}}"
