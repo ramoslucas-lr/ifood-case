@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Airflow
+airflow/logs/*
+!airflow/logs/.gitkeep
+airflow/config/airflow.cfg
+airflow/config/standalone_admin_password.txt
+airflow/airflow-webserver.pid
+
+# Sensitive credentials
+*accessKeys.csv
