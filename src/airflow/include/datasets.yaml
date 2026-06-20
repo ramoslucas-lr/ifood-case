@@ -1,0 +1,7 @@
+global_settings:
+  s3_bucket: "ifood-case-lucas-datalake-762131618299-us-east-2-an"
+  s3_bronze_prefix: "bronze/nyc_tlc"
+
+datasets:
+  - name: "yellow"
+    endpoint_template: "trip-data/yellow_tripdata_{{ logical_date.strftime('%Y-%m') }}.parquet"
