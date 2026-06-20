@@ -1,8 +1,12 @@
 import argparse
 import sys
-from pathlib import Path
+import os
 
-sys.path.append(str(Path(__file__).parent))
+# Compatibilidade com Databricks Serverless (onde __file__ é indefinido no ipykernel)
+cwd = os.getcwd()
+current_dir = cwd if cwd.endswith("src/databricks") else os.path.join(cwd, "src", "databricks")
+
+sys.path.insert(0, current_dir)
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit

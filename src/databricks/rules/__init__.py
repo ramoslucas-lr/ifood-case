@@ -3,7 +3,7 @@ from .nyc_yellow_taxi import NYCYellowTaxiRule
 
 def get_rule(dataset_name: str) -> TransformationRule:
     rules = {
-        "yellow_taxi": NYCYellowTaxiRule()
+        "yellow": NYCYellowTaxiRule()
     }
     
     if dataset_name not in rules:

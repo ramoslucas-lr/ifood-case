@@ -12,11 +12,11 @@ targets:
     workspace:
       host: https://dbc-441c4e73-bb89.cloud.databricks.com
 
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://dbc-441c4e73-bb89.cloud.databricks.com
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-441c4e73-bb89.cloud.databricks.com
+      root_path: /Workspace/Users/ramoslucas.lr@gmail.com/.bundle/${bundle.name}/${bundle.target}
 
 resources:
   jobs:
@@ -25,10 +25,10 @@ resources:
       environments:
         - environment_key: serverless_env
           spec:
-            environment_version: "1"
+            environment_version: "5"
       parameters:
         - name: "dataset"
-          default: "yellow_taxi"
+          default: "yellow"
         - name: "ano"
           default: "2023"
         - name: "mes"
