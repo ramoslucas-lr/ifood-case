@@ -9,7 +9,7 @@ import sys
 import os
 import logging
 
-# Configuração de Logging Profissional
+# Configuração de Logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -37,11 +37,11 @@ def get_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description="Generic Bronze to Silver Pipeline")
     parser.add_argument("--dataset", required=True, help="Nome lógico do dataset (ex: yellow)")
-    parser.add_argument("--ano", required=True, help="Year of the data partition")
-    parser.add_argument("--mes", required=True, help="Month of the data partition")
-    parser.add_argument("--s3-bucket", required=True, help="S3 bucket name")
-    parser.add_argument("--bronze-prefix", required=True, help="Prefix for Bronze layer")
-    parser.add_argument("--silver-prefix", required=True, help="Prefix for Silver layer")
+    parser.add_argument("--bronze-path", required=True, help="Caminho absoluto do S3 para ler os dados da Bronze")
+    parser.add_argument("--silver-path", required=True, help="Caminho absoluto do S3 para gravar na Silver")
+    parser.add_argument("--table-name", required=True, help="Nome da tabela no Unity Catalog/Hive Metastore")
+    parser.add_argument("--partition-keys", required=False, default="", help="Chaves de partição separadas por vírgula (ex: ano,mes)")
+    parser.add_argument("--partition-values", required=False, default="", help="Valores de partição separados por vírgula (ex: 2023,01)")
     return parser.parse_args()
 
 
@@ -54,9 +54,16 @@ def main() -> None:
     spark = SparkSession.builder.appName(f"BronzeToSilver_{args.dataset}").getOrCreate()
     rule = get_rule(args.dataset)
     
-    bronze_path = f"s3a://{args.s3_bucket}/{args.bronze_prefix}/{args.dataset}/ano={args.ano}/mes={args.mes}/data.parquet"
-    silver_path = f"s3a://{args.s3_bucket}/{args.silver_prefix}/{args.dataset}/"
-    table_name = f"default.silver_nyc_tlc_{args.dataset}"
+    bronze_path = args.bronze_path
+    silver_path = args.silver_path
+    table_name = args.table_name
+    
+    # Extrai chaves e valores de partição (se houverem)
+    part_keys = [k.strip() for k in args.partition_keys.split(",")] if args.partition_keys else []
+    part_values = [v.strip() for v in args.partition_values.split(",")] if args.partition_values else []
+    
+    if len(part_keys) != len(part_values):
+        raise ValueError("Quantidade de partition-keys e partition-values não bate.")
     
     try:
         df = read_parquet(spark, bronze_path)
@@ -66,15 +73,23 @@ def main() -> None:
         logger.warning("Finalizando execução com sucesso para evitar quebra da pipeline em partições inexistentes.")
         return
         
-    df = df.withColumn("ano", lit(args.ano)).withColumn("mes", lit(args.mes))
+    # Injeta colunas de partição dinamicamente
+    for k, v in zip(part_keys, part_values):
+        df = df.withColumn(k, lit(v))
+
     df_transformed = rule.apply(df)
-    replace_condition = f"ano = '{args.ano}' AND mes = '{args.mes}'"
+    
+    # Monta condição do replaceWhere dinamicamente (idempotência)
+    if part_keys:
+        replace_condition = " AND ".join([f"{k} = '{v}'" for k, v in zip(part_keys, part_values)])
+    else:
+        replace_condition = None
     
     write_delta_upsert(
         df=df_transformed,
         path=silver_path,
         table_name=table_name,
-        partition_cols=["ano", "mes"],
+        partition_cols=part_keys,
         replace_condition=replace_condition
     )
     

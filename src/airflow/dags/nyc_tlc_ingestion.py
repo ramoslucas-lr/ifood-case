@@ -77,16 +77,21 @@ with DAG(
             replace=True,
         )
 
+        # Define paths explicitly inside the DAG to keep the Databricks job agnostic
+        silver_path = f"s3a://{s3_bucket}/silver/nyc_tlc/{dataset_name}/"
+        table_name = f"default.silver_nyc_tlc_{dataset_name}"
+
         silver_task = DatabricksRunNowOperator(
             task_id=f"silver_{dataset_name}_data",
             databricks_conn_id="databricks_default",
             job_name="NYC TLC: Bronze to Silver Pipeline",
             job_parameters={
-                "ano": "{{ logical_date.strftime('%Y') }}",
-                "mes": "{{ logical_date.strftime('%m') }}",
-                "s3_bucket": s3_bucket,
-                "bronze_prefix": s3_prefix,
-                "silver_prefix": "silver/nyc_tlc"
+                "dataset": dataset_name,
+                "bronze_path": f"s3a://{s3_bucket}/{s3_key}",
+                "silver_path": silver_path,
+                "table_name": table_name,
+                "partition_keys": "ano,mes",
+                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
             }
         )
 
