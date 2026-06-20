@@ -227,5 +227,3 @@ airflow/airflow-webserver.pid
 # Sensitive credentials
 *accessKeys.csv
 .vscode
-
-databricks*
