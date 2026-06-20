@@ -1,1 +1,1 @@
-apache-airflow[amazon]
+apache-airflow[amazon,databricks]
