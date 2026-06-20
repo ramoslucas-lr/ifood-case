@@ -95,4 +95,32 @@ with DAG(
             }
         )
 
-        ingest_task >> silver_task
+        gold_revenue_task = DatabricksRunNowOperator(
+            task_id=f"gold_{dataset_name}_monthly_revenue",
+            databricks_conn_id="databricks_default",
+            job_name="NYC TLC: Silver to Gold Pipeline",
+            job_parameters={
+                "mart_name": "monthly_revenue",
+                "silver_path": silver_path,
+                "gold_path": f"s3a://{s3_bucket}/gold/nyc_tlc/monthly_revenue/",
+                "table_name": "default.gold_nyc_tlc_monthly_revenue",
+                "partition_keys": "ano,mes",
+                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
+            }
+        )
+
+        gold_passengers_task = DatabricksRunNowOperator(
+            task_id=f"gold_{dataset_name}_hourly_passengers",
+            databricks_conn_id="databricks_default",
+            job_name="NYC TLC: Silver to Gold Pipeline",
+            job_parameters={
+                "mart_name": "hourly_passengers",
+                "silver_path": silver_path,
+                "gold_path": f"s3a://{s3_bucket}/gold/nyc_tlc/hourly_passengers/",
+                "table_name": "default.gold_nyc_tlc_hourly_passengers",
+                "partition_keys": "ano,mes",
+                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
+            }
+        )
+
+        ingest_task >> silver_task >> [gold_revenue_task, gold_passengers_task]
