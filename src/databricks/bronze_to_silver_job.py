@@ -1,6 +1,20 @@
+"""
+Orquestrador central do pipeline Bronze -> Silver no Databricks.
+Executa de forma genérica o carregamento de partições, invoca a regra de negócio do dataset
+solicitado e faz o upsert seguro no Data Lake (Delta Lake).
+"""
+
 import argparse
 import sys
 import os
+import logging
+
+# Configuração de Logging Profissional
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Compatibilidade com Databricks Serverless (onde __file__ é indefinido no ipykernel)
 cwd = os.getcwd()
@@ -13,9 +27,16 @@ from pyspark.sql.functions import lit
 from common.io_utils import read_parquet, write_delta_upsert
 from rules import get_rule
 
-def get_args():
+
+def get_args() -> argparse.Namespace:
+    """
+    Parseia os argumentos passados via linha de comando ou Job Parameters pelo orquestrador.
+    
+    Returns:
+        argparse.Namespace: Objeto contendo os parâmetros configurados.
+    """
     parser = argparse.ArgumentParser(description="Generic Bronze to Silver Pipeline")
-    parser.add_argument("--dataset", required=True, help="Nome lógico do dataset (ex: yellow_taxi)")
+    parser.add_argument("--dataset", required=True, help="Nome lógico do dataset (ex: yellow)")
     parser.add_argument("--ano", required=True, help="Year of the data partition")
     parser.add_argument("--mes", required=True, help="Month of the data partition")
     parser.add_argument("--s3-bucket", required=True, help="S3 bucket name")
@@ -23,11 +44,14 @@ def get_args():
     parser.add_argument("--silver-prefix", required=True, help="Prefix for Silver layer")
     return parser.parse_args()
 
-def main():
+
+def main() -> None:
+    """
+    Ponto de entrada do script PySpark.
+    """
     args = get_args()
     
     spark = SparkSession.builder.appName(f"BronzeToSilver_{args.dataset}").getOrCreate()
-    
     rule = get_rule(args.dataset)
     
     bronze_path = f"s3a://{args.s3_bucket}/{args.bronze_prefix}/{args.dataset}/ano={args.ano}/mes={args.mes}/data.parquet"
@@ -37,10 +61,12 @@ def main():
     try:
         df = read_parquet(spark, bronze_path)
     except Exception as e:
+        logger.warning(f"Erro ao ler dados da camada Bronze no caminho '{bronze_path}'.")
+        logger.warning(f"Detalhes: {str(e)}")
+        logger.warning("Finalizando execução com sucesso para evitar quebra da pipeline em partições inexistentes.")
         return
         
     df = df.withColumn("ano", lit(args.ano)).withColumn("mes", lit(args.mes))
-
     df_transformed = rule.apply(df)
     replace_condition = f"ano = '{args.ano}' AND mes = '{args.mes}'"
     
@@ -51,6 +77,9 @@ def main():
         partition_cols=["ano", "mes"],
         replace_condition=replace_condition
     )
+    
+    logger.info(f"Processamento finalizado com sucesso. Dados gravados na Silver em {silver_path}")
+
 
 if __name__ == "__main__":
     main()
