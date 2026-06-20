@@ -23,6 +23,7 @@ import pendulum
 import yaml
 from airflow import DAG
 from airflow.providers.amazon.aws.transfers.http_to_s3 import HttpToS3Operator
+from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
 
 # Define os caminhos absolutos para os arquivos de configuração
 DAGS_FOLDER = Path(__file__).parent
@@ -67,7 +68,7 @@ with DAG(
             f"mes={{{{ logical_date.strftime('%m') }}}}/data.parquet"
         )
 
-        HttpToS3Operator(
+        ingest_task = HttpToS3Operator(
             task_id=f"ingest_{dataset_name}_data",
             http_conn_id="nyc_tlc_connection",
             endpoint=dataset.get("endpoint_template"),
@@ -75,3 +76,18 @@ with DAG(
             s3_key=s3_key,
             replace=True,
         )
+
+        silver_task = DatabricksRunNowOperator(
+            task_id=f"silver_{dataset_name}_data",
+            databricks_conn_id="databricks_default",
+            job_name="NYC TLC: Bronze to Silver Pipeline",
+            job_parameters={
+                "ano": "{{ logical_date.strftime('%Y') }}",
+                "mes": "{{ logical_date.strftime('%m') }}",
+                "s3_bucket": s3_bucket,
+                "bronze_prefix": s3_prefix,
+                "silver_prefix": "silver/nyc_tlc"
+            }
+        )
+
+        ingest_task >> silver_task
