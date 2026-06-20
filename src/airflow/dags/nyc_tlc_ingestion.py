@@ -20,6 +20,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import pendulum
 import yaml
 from airflow import DAG
 from airflow.providers.amazon.aws.transfers.http_to_s3 import HttpToS3Operator
@@ -49,7 +50,7 @@ datasets = config.get("datasets", [])
 
 with DAG(
     dag_id="nyc_tlc_ingestion",
-    start_date=datetime(2023, 1, 1),
+    start_date=pendulum.datetime(2023, 1, 1, tz="America/Sao_Paulo"),
     schedule="@monthly",
     catchup=False,
     tags=["nyc_tlc", "ingestion", "s3"],
