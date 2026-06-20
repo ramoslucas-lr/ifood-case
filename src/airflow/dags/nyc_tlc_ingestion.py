@@ -17,7 +17,6 @@ Este design segue as melhores práticas do Airflow ao:
 """
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import pendulum
