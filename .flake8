@@ -1,12 +1,8 @@
 [flake8]
-max-line-length = 88
-extend-ignore = E203, W503
+max-line-length = 120
+extend-ignore = E402
 exclude =
     .git,
     __pycache__,
-    build,
-    dist,
-    .venv,
-    .tox,
     venv,
-    env
+    miniforge3

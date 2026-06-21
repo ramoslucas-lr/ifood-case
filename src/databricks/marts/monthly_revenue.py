@@ -17,6 +17,6 @@ class MonthlyRevenueMart(DataMart):
         df_gold = df_fact.groupBy("ano", "mes").agg(
             count("*").alias("total_trips"),
             sum("total_amount").alias("sum_total_amount"),
-            round(avg("total_amount"), 2).alias("avg_total_amount")
+            round(avg("total_amount"), 2).alias("avg_total_amount"),
         )
         return df_gold

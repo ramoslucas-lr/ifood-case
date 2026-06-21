@@ -17,10 +17,10 @@ class TransformationRule(ABC):
     def apply(self, df: DataFrame) -> DataFrame:
         """
         Aplica regras de limpeza, formatação e qualidade aos dados.
-        
+
         Args:
             df (DataFrame): O DataFrame bruto extraído da camada Bronze.
-            
+
         Returns:
             DataFrame: O DataFrame processado, pronto para a camada Silver.
         """

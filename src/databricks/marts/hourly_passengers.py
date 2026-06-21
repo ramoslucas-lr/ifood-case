@@ -15,10 +15,10 @@ class HourlyPassengersMart(DataMart):
 
     def build(self, spark: SparkSession, df_fact: DataFrame) -> DataFrame:
         df_with_hour = df_fact.withColumn("hora", hour(col("tpep_pickup_datetime")))
-        
+
         df_gold = df_with_hour.groupBy("ano", "mes", "hora").agg(
             count("*").alias("total_trips"),
             sum("passenger_count").alias("sum_passengers"),
-            round(avg("passenger_count"), 2).alias("avg_passenger_count")
+            round(avg("passenger_count"), 2).alias("avg_passenger_count"),
         )
         return df_gold
