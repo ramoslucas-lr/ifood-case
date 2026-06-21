@@ -29,8 +29,11 @@ A esteira de dados implementa a rigorosa **Medallion Architecture (Raw -> Bronze
 │   │   ├── rules/                           # Motor de Regras de Negócio (ex: NYCYellowTaxiRule)
 │   │   └── marts/                           # Motor Analítico / Agregações (ex: MonthlyRevenueMart)
 ├── tests/                                   # Suite de Testes Pytest (Roda puramente na Memória/RAM)
-├── analysis/                                # EDA e Respostas SQL das perguntas de Negócio
-└── ARCHITECTURE_EVOLUTION.md                # Reflexões Arquiteturais e próximos passos
+├── analysis/
+│   └── respostas.sql                        # Queries Analíticas respondendo às perguntas de negócio
+├── databricks.yml                           # Configurações de Deploy (Databricks Asset Bundles)
+├── requirements.txt                         # Dependências de Qualidade e Processamento local
+└── .flake8                                  # Configuração de Linter (Max line length 120, etc)
 ```
 
 ## 🚀 Como Executar
@@ -45,15 +48,18 @@ A esteira de dados implementa a rigorosa **Medallion Architecture (Raw -> Bronze
 Graças ao design pattern de injeção de dependência via Classes (`TransformationRule` e `DataMart`), a lógica pesada de Spark pode ser testada localmente de forma offline, sem encostar em um cluster em nuvem.
 
 ```bash
-# Crie e ative um ambiente limpo
-conda create -n ifood-test python=3.10 -y
+# Crie um ambiente isolado com Python e o Java 17 (exigido pelo Spark 4.0+)
+conda create -n ifood-test python=3.10 openjdk=17 -c conda-forge -y
 conda activate ifood-test
 
-# Instale os requisitos e a engine do Spark local
-pip install -r requirements.txt pyspark pytest
+# Instale os requisitos (PySpark, Pytest, Airflow e Linters)
+pip install -r requirements.txt
 
 # Execute a Suite de Testes com Pytest
 python3 -m pytest tests/ -v
+
+# Valide a formatação estrita do código (PEP-8)
+flake8 src/ tests/
 ```
 
 ### 3. Deploy no Databricks
@@ -68,7 +74,7 @@ Na UI do Airflow, configure as conexões base:
 - `databricks_default`: Token de Autenticação do seu Workspace Databricks.
 - `aws_default`: Credenciais de acesso ao S3 Raw Layer.
 
-Ative a DAG `nyc_tlc_ingestion_pipeline`. Graças ao **DAG Factory**, novos datasets são ingeridos automaticamente assim que registrados no `nyc_tlc_datasets.yaml`.
+Ative a DAG `nyc_tlc_ingestion`. Graças ao **DAG Factory**, novos datasets são ingeridos automaticamente assim que registrados no `nyc_tlc_datasets.yaml`.
 
 ## 🛡️ Principais Decisões e Destaques de Engenharia
 
