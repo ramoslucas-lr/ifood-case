@@ -43,6 +43,7 @@ def write_delta_upsert(
     writer = (df.write
               .format("delta")
               .mode("overwrite")
+              .option("mergeSchema", "true")
               .partitionBy(*partition_cols))
     
     if replace_condition:
