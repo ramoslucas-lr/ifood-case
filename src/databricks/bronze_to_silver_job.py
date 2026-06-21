@@ -8,6 +8,7 @@ import argparse
 import sys
 import os
 import logging
+from pyspark.sql.functions import col
 
 # Configuração de Logging
 logging.basicConfig(
@@ -66,16 +67,16 @@ def main() -> None:
         raise ValueError("Quantidade de partition-keys e partition-values não bate.")
     
     try:
-        df = read_parquet(spark, bronze_path)
+        df = spark.read.format("delta").load(bronze_path)
     except Exception as e:
         logger.warning(f"Erro ao ler dados da camada Bronze no caminho '{bronze_path}'.")
         logger.warning(f"Detalhes: {str(e)}")
         logger.warning("Finalizando execução com sucesso para evitar quebra da pipeline em partições inexistentes.")
         return
         
-    # Injeta colunas de partição dinamicamente
+    # Otimização: Pushdown Filter para processar apenas a partição lida
     for k, v in zip(part_keys, part_values):
-        df = df.withColumn(k, lit(v))
+        df = df.filter(col(k) == v)
 
     df_transformed = rule.apply(df)
     

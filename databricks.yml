@@ -30,7 +30,7 @@ resources:
         - name: "dataset"
           default: "yellow"
         - name: "bronze_path"
-          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/bronze/nyc_tlc/yellow/ano=2023/mes=01/data.parquet"
+          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/bronze/nyc_tlc/yellow/"
         - name: "silver_path"
           default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/silver/nyc_tlc/yellow/"
         - name: "table_name"
@@ -89,6 +89,44 @@ resources:
               - "{{job.parameters.silver_path}}"
               - "--gold-path"
               - "{{job.parameters.gold_path}}"
+              - "--table-name"
+              - "{{job.parameters.table_name}}"
+              - "--partition-keys"
+              - "{{job.parameters.partition_keys}}"
+              - "--partition-values"
+              - "{{job.parameters.partition_values}}"
+
+    raw_to_bronze_pipeline:
+      name: "NYC TLC: Raw to Bronze Pipeline"
+      environments:
+        - environment_key: serverless_env
+          spec:
+            environment_version: "5"
+      parameters:
+        - name: "dataset"
+          default: "yellow"
+        - name: "raw_path"
+          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/raw/nyc_tlc/yellow/ano=2023/mes=01/data.parquet"
+        - name: "bronze_path"
+          default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/bronze/nyc_tlc/yellow/"
+        - name: "table_name"
+          default: "default.bronze_nyc_tlc_yellow"
+        - name: "partition_keys"
+          default: "ano,mes"
+        - name: "partition_values"
+          default: "2023,01"
+      tasks:
+        - task_key: "process_raw_data"
+          environment_key: "serverless_env"
+          spark_python_task:
+            python_file: "src/databricks/raw_to_bronze_job.py"
+            parameters:
+              - "--dataset"
+              - "{{job.parameters.dataset}}"
+              - "--raw-path"
+              - "{{job.parameters.raw_path}}"
+              - "--bronze-path"
+              - "{{job.parameters.bronze_path}}"
               - "--table-name"
               - "{{job.parameters.table_name}}"
               - "--partition-keys"
