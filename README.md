@@ -7,7 +7,7 @@ Este repositório contém a solução de Engenharia de Dados para o desafio do i
 
 A pipeline de dados utiliza a Medallion Architecture (Raw -> Bronze -> Silver -> Gold):
 
-- **Orquestração**: Apache Airflow (com DAG Factory dinâmico via YAML).
+- **Orquestração**: Apache Airflow (com geração dinâmica de tasks via YAML).
 - **Processamento Distribuído**: Databricks (PySpark) e Databricks Asset Bundles.
 - **Storage**: Amazon S3 (Delta Lake).
 - **Testes e Qualidade**: Pytest, Black e Flake8.
@@ -21,7 +21,7 @@ A pipeline de dados utiliza a Medallion Architecture (Raw -> Bronze -> Silver ->
 ├── src/
 │   ├── airflow/
 │   │   ├── dags/nyc_tlc_ingestion.py        # DAG unificada que orquestra tarefas dinamicamente
-│   │   └── include/nyc_tlc_datasets.yaml    # Configuração de datasets (DAG Factory)
+│   │   └── include/nyc_tlc_datasets.yaml    # Configuração de datasets para geração dinâmica
 │   ├── databricks/
 │   │   ├── raw_to_bronze_job.py             # Ingestão de dados brutos com conversão de tipos
 │   │   ├── bronze_to_silver_job.py          # Limpeza de dados e aplicação de regras de negócio
@@ -79,5 +79,5 @@ Em seguida, ative a DAG `nyc_tlc_ingestion`. Novos arquivos podem ser adicionado
 ## Decisões Técnicas
 
 1. **Tratamento de Schema Drift**: Os arquivos da TLC costumam alterar os tipos de dados nativos. O job `raw_to_bronze` coleta o esquema atual da tabela Delta e realiza casts dinâmicos antes do _upsert_, evitando falhas de compatibilidade do Delta Lake (`DELTA_FAILED_TO_MERGE_FIELDS`).
-2. **DAG Factory**: A DAG lê as instruções a partir de um arquivo YAML. Para estender o pipeline (por exemplo, adicionando bases do For-Hire Vehicles), não há necessidade de modificar o código fonte Python.
+2. **Geração Dinâmica de Tasks**: A DAG lê as instruções a partir de um arquivo YAML para instanciar as tarefas. Para estender o pipeline (por exemplo, adicionando bases do For-Hire Vehicles), não há necessidade de modificar o código fonte Python.
 3. **Padrão de Código**: O repositório segue tipagem nativa, docstrings em padrão PEP-257 e regras de formatação consolidadas pelo `black` e `flake8`.
