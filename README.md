@@ -30,8 +30,11 @@ A pipeline de dados utiliza a Medallion Architecture (Raw -> Bronze -> Silver ->
 │   │   └── marts/                           # Motor Analítico (ex: MonthlyRevenueMart)
 ├── tests/                                   # Suite de testes (Pytest)
 ├── analysis/
+│   ├── eda_nyc_tlc.ipynb                    # Notebook de Análise Exploratória de Dados (EDA)
 │   └── respostas.sql                        # Queries SQL correspondentes às perguntas do case
+├── airflow/                                 # Ambiente local do Apache Airflow (Docker Compose)
 ├── databricks.yml                           # Configurações de deploy no Databricks
+├── pyproject.toml                           # Configurações de ferramentas (Black, Pytest)
 ├── requirements.txt                         # Dependências do projeto
 └── .flake8                                  # Configuração de Linter
 ```
@@ -69,6 +72,13 @@ databricks bundle deploy -t prod
 ```
 
 ### 4. Orquestração (Airflow)
+Para executar o pipeline localmente, inicie os containers do Airflow:
+```bash
+cd airflow/
+docker compose up -d
+```
+Acesse a interface gráfica em `http://localhost:8080` (usuário/senha padrão: `airflow`).
+
 Na UI do Airflow, configure as conexões base:
 - `nyc_tlc_connection`: Tipo HTTP com Host `https://d37ci6vzurychx.cloudfront.net`
 - `databricks_default`: Conexão com o seu Workspace Databricks.
