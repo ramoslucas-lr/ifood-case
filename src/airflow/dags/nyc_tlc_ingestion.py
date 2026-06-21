@@ -62,11 +62,9 @@ with DAG(
         dataset_name = dataset.get("name")
 
         # Define a chave de destino no S3 particionada por ano e mês usando Jinja templating
-        s3_key = (
-            f"{s3_prefix}/{dataset_name}/"
-            f"ano={{{{ logical_date.strftime('%Y') }}}}/"
-            f"mes={{{{ logical_date.strftime('%m') }}}}/data.parquet"
-        )
+        # Lê os prefixos globais com fallback seguro
+        s3_raw_prefix = global_settings.get("s3_raw_prefix", "raw/nyc_tlc")
+        s3_key = f"{s3_raw_prefix}/{dataset_name}/ano={{{{ logical_date.strftime('%Y') }}}}/mes={{{{ logical_date.strftime('%m') }}}}/data.parquet"
 
         ingest_task = HttpToS3Operator(
             task_id=f"ingest_{dataset_name}_data",
@@ -78,8 +76,29 @@ with DAG(
         )
 
         # Define paths explicitly inside the DAG to keep the Databricks job agnostic
-        silver_path = f"s3a://{s3_bucket}/silver/nyc_tlc/{dataset_name}/"
+        s3_bronze_prefix = global_settings.get("s3_bronze_prefix", "bronze/nyc_tlc")
+        s3_silver_prefix = global_settings.get("s3_silver_prefix", "silver/nyc_tlc")
+        s3_gold_prefix = global_settings.get("s3_gold_prefix", "gold/nyc_tlc")
+        
+        raw_path = f"s3a://{s3_bucket}/{s3_key}"
+        bronze_path = f"s3a://{s3_bucket}/{s3_bronze_prefix}/{dataset_name}/"
+        silver_path = f"s3a://{s3_bucket}/{s3_silver_prefix}/{dataset_name}/"
         table_name = f"default.silver_nyc_tlc_{dataset_name}"
+        bronze_table_name = f"default.bronze_nyc_tlc_{dataset_name}"
+
+        raw_task = DatabricksRunNowOperator(
+            task_id=f"raw_to_bronze_{dataset_name}_data",
+            databricks_conn_id="databricks_default",
+            job_name="NYC TLC: Raw to Bronze Pipeline",
+            job_parameters={
+                "dataset": dataset_name,
+                "raw_path": raw_path,
+                "bronze_path": bronze_path,
+                "table_name": bronze_table_name,
+                "partition_keys": "ano,mes",
+                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
+            }
+        )
 
         silver_task = DatabricksRunNowOperator(
             task_id=f"silver_{dataset_name}_data",
@@ -87,7 +106,7 @@ with DAG(
             job_name="NYC TLC: Bronze to Silver Pipeline",
             job_parameters={
                 "dataset": dataset_name,
-                "bronze_path": f"s3a://{s3_bucket}/{s3_key}",
+                "bronze_path": bronze_path,
                 "silver_path": silver_path,
                 "table_name": table_name,
                 "partition_keys": "ano,mes",
@@ -102,7 +121,7 @@ with DAG(
             job_parameters={
                 "mart_name": "monthly_revenue",
                 "silver_path": silver_path,
-                "gold_path": f"s3a://{s3_bucket}/gold/nyc_tlc/monthly_revenue/",
+                "gold_path": f"s3a://{s3_bucket}/{s3_gold_prefix}/monthly_revenue/",
                 "table_name": "default.gold_nyc_tlc_monthly_revenue",
                 "partition_keys": "ano,mes",
                 "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
@@ -116,11 +135,11 @@ with DAG(
             job_parameters={
                 "mart_name": "hourly_passengers",
                 "silver_path": silver_path,
-                "gold_path": f"s3a://{s3_bucket}/gold/nyc_tlc/hourly_passengers/",
+                "gold_path": f"s3a://{s3_bucket}/{s3_gold_prefix}/hourly_passengers/",
                 "table_name": "default.gold_nyc_tlc_hourly_passengers",
                 "partition_keys": "ano,mes",
                 "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}"
             }
         )
 
-        ingest_task >> silver_task >> [gold_revenue_task, gold_passengers_task]
+        ingest_task >> raw_task >> silver_task >> [gold_revenue_task, gold_passengers_task]
