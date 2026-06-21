@@ -1,7 +1,7 @@
 """
-Orquestrador central do pipeline Raw -> Bronze no Databricks.
-Lê os arquivos originais (ex: Parquet) da camada Raw e ingere na camada Bronze
-como uma tabela Delta, registrando o timestamp de processamento e as colunas de partição.
+Orquestra o pipeline de dados Raw para Bronze.
+Lê os dados brutos e faz a ingestão em uma tabela Delta,
+adicionando timestamps de ingestão e particionamento.
 """
 
 import argparse
@@ -26,6 +26,7 @@ from common.io_utils import read_parquet, write_delta_upsert
 
 
 def get_args() -> argparse.Namespace:
+    """Faz o parse dos argumentos de linha de comando."""
     parser = argparse.ArgumentParser(description="Raw to Bronze Pipeline")
     parser.add_argument("--dataset", required=True, help="Nome lógico do dataset (ex: yellow)")
     parser.add_argument("--raw-path", required=True, help="Caminho do arquivo na Raw")
@@ -37,6 +38,7 @@ def get_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Ponto de entrada principal do job PySpark."""
     args = get_args()
     
     spark = SparkSession.builder.appName(f"RawToBronze_{args.dataset}").getOrCreate()
@@ -55,11 +57,6 @@ def main() -> None:
         logger.warning("Finalizando execução com sucesso para evitar quebra da pipeline.")
         return
         
-    # [RESOLUÇÃO DE SCHEMA DRIFT AGNÓSTICA]
-    # O dataset da TLC altera tipos (Int vs Long, Float vs Double) ao longo dos meses.
-    # Para sermos 100% agnósticos e não fixarmos um schema no código, nós lemos
-    # o schema da tabela Delta existente (se houver) e forçamos o DataFrame atual
-    # a fazer o cast para os tipos que já estão na tabela.
     df = df.toDF(*[c.lower() for c in df.columns])
     
     try:
@@ -70,17 +67,13 @@ def main() -> None:
             if c in existing_schema:
                 df = df.withColumn(c, col(c).cast(existing_schema[c]))
     except Exception:
-        # A tabela Bronze ainda não existe (primeira execução), então mantemos os tipos da Raw
         pass
 
-    # Injeta _ingestion_timestamp para auditoria
     df = df.withColumn("_ingestion_timestamp", current_timestamp())
     
-    # Injeta colunas de partição dinamicamente
     for k, v in zip(part_keys, part_values):
         df = df.withColumn(k, lit(v))
         
-    # Monta condição do replaceWhere dinamicamente (idempotência)
     if part_keys:
         replace_condition = " AND ".join([f"{k} = '{v}'" for k, v in zip(part_keys, part_values)])
     else:

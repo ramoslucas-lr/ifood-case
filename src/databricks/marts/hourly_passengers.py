@@ -1,6 +1,6 @@
 """
 Data Mart: Passageiros por Hora.
-Responde à pergunta: Qual a média de passageiros por cada hora do dia no mês de maio?
+Agrega a contagem de passageiros por ano, mês e hora.
 """
 
 from pyspark.sql import DataFrame, SparkSession
@@ -10,7 +10,7 @@ from marts.base_mart import DataMart
 
 class HourlyPassengersMart(DataMart):
     """
-    Extrai a hora da viagem e agrega para gerar o consolidado de passageiros por hora.
+    Calcula as métricas de passageiros por hora a partir da tabela fato da camada Silver.
     """
 
     def build(self, spark: SparkSession, df_fact: DataFrame) -> DataFrame:

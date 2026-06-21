@@ -1,7 +1,6 @@
 """
-Orquestrador central do pipeline Bronze -> Silver no Databricks.
-Executa de forma genérica o carregamento de partições, invoca a regra de negócio do dataset
-solicitado e faz o upsert seguro no Data Lake (Delta Lake).
+Orquestra o pipeline de dados Bronze para Silver.
+Carrega uma partição específica, aplica as regras de negócio e executa um upsert idempotente na camada Silver.
 """
 
 import argparse
@@ -31,12 +30,12 @@ from rules import get_rule
 
 def get_args() -> argparse.Namespace:
     """
-    Parseia os argumentos passados via linha de comando ou Job Parameters pelo orquestrador.
+    Faz o parse dos argumentos de linha de comando.
     
     Returns:
-        argparse.Namespace: Objeto contendo os parâmetros configurados.
+        argparse.Namespace: Argumentos processados.
     """
-    parser = argparse.ArgumentParser(description="Generic Bronze to Silver Pipeline")
+    parser = argparse.ArgumentParser(description="Bronze to Silver Pipeline")
     parser.add_argument("--dataset", required=True, help="Nome lógico do dataset (ex: yellow)")
     parser.add_argument("--bronze-path", required=True, help="Caminho absoluto do S3 para ler os dados da Bronze")
     parser.add_argument("--silver-path", required=True, help="Caminho absoluto do S3 para gravar na Silver")
@@ -47,9 +46,7 @@ def get_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """
-    Ponto de entrada do script PySpark.
-    """
+    """Ponto de entrada principal do job PySpark."""
     args = get_args()
     
     spark = SparkSession.builder.appName(f"BronzeToSilver_{args.dataset}").getOrCreate()
@@ -59,7 +56,6 @@ def main() -> None:
     silver_path = args.silver_path
     table_name = args.table_name
     
-    # Extrai chaves e valores de partição (se houverem)
     part_keys = [k.strip() for k in args.partition_keys.split(",")] if args.partition_keys else []
     part_values = [v.strip() for v in args.partition_values.split(",")] if args.partition_values else []
     
@@ -74,13 +70,11 @@ def main() -> None:
         logger.warning("Finalizando execução com sucesso para evitar quebra da pipeline em partições inexistentes.")
         return
         
-    # Otimização: Pushdown Filter para processar apenas a partição lida
     for k, v in zip(part_keys, part_values):
         df = df.filter(col(k) == v)
 
     df_transformed = rule.apply(df)
     
-    # Monta condição do replaceWhere dinamicamente (idempotência)
     if part_keys:
         replace_condition = " AND ".join([f"{k} = '{v}'" for k, v in zip(part_keys, part_values)])
     else:

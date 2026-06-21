@@ -1,7 +1,6 @@
 """
-Orquestrador central do pipeline Silver -> Gold no Databricks.
-Executa de forma genérica o carregamento da partição da Silver,
-injeta a SparkSession no Data Mart para máxima flexibilidade e faz o upsert na Gold.
+Orquestra o pipeline de dados Silver para Gold.
+Aplica agregações de um Data Mart específico e faz o upsert na camada Gold.
 """
 
 import argparse

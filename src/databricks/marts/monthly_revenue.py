@@ -1,6 +1,6 @@
 """
 Data Mart: Receita Mensal.
-Responde à pergunta: Qual a média de valor total (total_amount) recebido em um mês?
+Agrega a métrica total_amount por ano e mês.
 """
 
 from pyspark.sql import DataFrame, SparkSession
@@ -10,7 +10,7 @@ from marts.base_mart import DataMart
 
 class MonthlyRevenueMart(DataMart):
     """
-    Agrega a tabela fato por Ano e Mês para gerar o consolidado financeiro.
+    Calcula as métricas mensais de receita a partir da tabela fato da camada Silver.
     """
 
     def build(self, spark: SparkSession, df_fact: DataFrame) -> DataFrame:
