@@ -29,6 +29,8 @@ resources:
       parameters:
         - name: "dataset"
           default: "yellow"
+        - name: "rule_name"
+          default: "nyc_yellow_taxi"
         - name: "bronze_path"
           default: "s3a://ifood-case-lucas-datalake-762131618299-us-east-2-an/bronze/nyc_tlc/yellow/"
         - name: "silver_path"
@@ -47,6 +49,8 @@ resources:
             parameters:
               - "--dataset"
               - "{{job.parameters.dataset}}"
+              - "--rule-name"
+              - "{{job.parameters.rule_name}}"
               - "--bronze-path"
               - "{{job.parameters.bronze_path}}"
               - "--silver-path"

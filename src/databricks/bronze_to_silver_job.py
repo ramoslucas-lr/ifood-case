@@ -40,6 +40,9 @@ def get_args() -> argparse.Namespace:
         "--dataset", required=True, help="Nome lógico do dataset (ex: yellow)"
     )
     parser.add_argument(
+        "--rule-name", required=True, help="Nome da regra de negócio (ex: nyc_yellow_taxi)"
+    )
+    parser.add_argument(
         "--bronze-path",
         required=True,
         help="Caminho absoluto do S3 para ler os dados da Bronze",
@@ -74,7 +77,7 @@ def main() -> None:
     args = get_args()
 
     spark = SparkSession.builder.appName(f"BronzeToSilver_{args.dataset}").getOrCreate()
-    rule = get_rule(args.dataset)
+    rule = get_rule(args.rule_name)
 
     bronze_path = args.bronze_path
     silver_path = args.silver_path

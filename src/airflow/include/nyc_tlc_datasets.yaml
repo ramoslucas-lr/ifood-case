@@ -8,3 +8,9 @@ global_settings:
 datasets:
   - name: "yellow"
     endpoint_template: "trip-data/yellow_tripdata_{{ logical_date.strftime('%Y-%m') }}.parquet"
+    silver_rule: "nyc_yellow_taxi"
+    marts:
+      - name: "monthly_revenue"
+        table_name: "default.gold_nyc_tlc_monthly_revenue"
+      - name: "hourly_passengers"
+        table_name: "default.gold_nyc_tlc_hourly_passengers"

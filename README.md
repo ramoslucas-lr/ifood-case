@@ -7,7 +7,7 @@ Este repositório contém a solução de Engenharia de Dados para o desafio do i
 
 A pipeline de dados utiliza a Medallion Architecture (Raw -> Bronze -> Silver -> Gold):
 
-- **Orquestração**: Apache Airflow (com geração dinâmica de tasks via YAML).
+- **Orquestração e Metadados**: Apache Airflow e YAML (Pipeline 100% Metadata-Driven: define fluxos, regras da Silver e Data Marts da Gold via configuração).
 - **Processamento Distribuído**: Databricks (PySpark) e Databricks Asset Bundles.
 - **Storage**: Amazon S3 (Delta Lake).
 - **Testes e Qualidade**: Pytest, Black e Flake8.
@@ -84,10 +84,10 @@ Na UI do Airflow, configure as conexões base:
 - `databricks_default`: Conexão com o seu Workspace Databricks.
 - `aws_default`: Credenciais de acesso ao S3.
 
-Em seguida, ative a DAG `nyc_tlc_ingestion`. Novos arquivos podem ser adicionados no pipeline editando apenas o `nyc_tlc_datasets.yaml`.
+Em seguida, ative a DAG `nyc_tlc_ingestion`. Graças à arquitetura orientada a metadados, novos fluxos, datasets (ex: For-Hire Vehicles), motores de regras da camada Silver e Data Marts da camada Gold podem ser adicionados na pipeline editando apenas o arquivo `nyc_tlc_datasets.yaml`. Nenhuma modificação no código fonte Python é necessária!
 
 ## Decisões Técnicas
 
 1. **Tratamento de Schema Drift**: Os arquivos da TLC costumam alterar os tipos de dados nativos. O job `raw_to_bronze` coleta o esquema atual da tabela Delta e realiza casts dinâmicos antes do _upsert_, evitando falhas de compatibilidade do Delta Lake (`DELTA_FAILED_TO_MERGE_FIELDS`).
-2. **Geração Dinâmica de Tasks**: A DAG lê as instruções a partir de um arquivo YAML para instanciar as tarefas. Para estender o pipeline (por exemplo, adicionando bases do For-Hire Vehicles), não há necessidade de modificar o código fonte Python.
+2. **Pipeline Orientada a Metadados (Metadata-Driven)**: A orquestração não possui regras _hardcoded_. A DAG lê o arquivo `nyc_tlc_datasets.yaml` não apenas para instanciar as tarefas de ingestão, mas também para definir **qual regra de negócio rodar na Silver** e **quais Data Marts instanciar na Gold**. Para adicionar novos fluxos (como _Green Taxis_ ou _For-Hire Vehicles_), basta atualizar o YAML. Nenhuma alteração em código Python é necessária!
 3. **Padrão de Código**: O repositório segue tipagem nativa, docstrings em padrão PEP-257 e regras de formatação consolidadas pelo `black` e `flake8`.

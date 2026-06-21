@@ -6,24 +6,24 @@ from .base_rule import TransformationRule
 from .nyc_yellow_taxi import NYCYellowTaxiRule
 
 
-def get_rule(dataset_name: str) -> TransformationRule:
+def get_rule(rule_name: str) -> TransformationRule:
     """
-    Retorna a instância correta de TransformationRule baseada no nome do dataset.
+    Retorna a instância correta de TransformationRule baseada no nome da regra.
 
     Args:
-        dataset_name (str): O identificador lógico do dataset (ex: 'yellow').
+        rule_name (str): O identificador lógico da regra (ex: 'nyc_yellow_taxi').
 
     Returns:
         TransformationRule: A instância da classe de regra apropriada.
 
     Raises:
-        ValueError: Caso o dataset não possua uma regra mapeada no registry.
+        ValueError: Caso a regra não seja encontrada no registry.
     """
-    rules = {"yellow": NYCYellowTaxiRule()}
+    rules = {"nyc_yellow_taxi": NYCYellowTaxiRule()}
 
-    if dataset_name not in rules:
+    if rule_name not in rules:
         raise ValueError(
-            f"Regra para o dataset '{dataset_name}' não encontrada no registry."
+            f"Regra '{rule_name}' não encontrada no registry."
         )
 
-    return rules[dataset_name]
+    return rules[rule_name]

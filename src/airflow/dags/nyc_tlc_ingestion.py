@@ -85,12 +85,15 @@ with DAG(
             },
         )
 
+        rule_name = dataset.get("silver_rule", dataset_name)
+
         silver_task = DatabricksRunNowOperator(
             task_id=f"silver_{dataset_name}_data",
             databricks_conn_id="databricks_default",
             job_name="NYC TLC: Bronze to Silver Pipeline",
             job_parameters={
                 "dataset": dataset_name,
+                "rule_name": rule_name,
                 "bronze_path": bronze_path,
                 "silver_path": silver_path,
                 "table_name": table_name,
@@ -99,37 +102,29 @@ with DAG(
             },
         )
 
-        gold_revenue_task = DatabricksRunNowOperator(
-            task_id=f"gold_{dataset_name}_monthly_revenue",
-            databricks_conn_id="databricks_default",
-            job_name="NYC TLC: Silver to Gold Pipeline",
-            job_parameters={
-                "mart_name": "monthly_revenue",
-                "silver_path": silver_path,
-                "gold_path": f"s3a://{s3_bucket}/{s3_gold_prefix}/monthly_revenue/",
-                "table_name": "default.gold_nyc_tlc_monthly_revenue",
-                "partition_keys": "ano,mes",
-                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}",
-            },
-        )
+        marts = dataset.get("marts", [])
+        gold_tasks = []
 
-        gold_passengers_task = DatabricksRunNowOperator(
-            task_id=f"gold_{dataset_name}_hourly_passengers",
-            databricks_conn_id="databricks_default",
-            job_name="NYC TLC: Silver to Gold Pipeline",
-            job_parameters={
-                "mart_name": "hourly_passengers",
-                "silver_path": silver_path,
-                "gold_path": f"s3a://{s3_bucket}/{s3_gold_prefix}/hourly_passengers/",
-                "table_name": "default.gold_nyc_tlc_hourly_passengers",
-                "partition_keys": "ano,mes",
-                "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}",
-            },
-        )
+        for mart in marts:
+            mart_name = mart.get("name")
+            mart_table_name = mart.get("table_name")
 
-        (
-            ingest_task
-            >> raw_task
-            >> silver_task
-            >> [gold_revenue_task, gold_passengers_task]
-        )
+            gold_task = DatabricksRunNowOperator(
+                task_id=f"gold_{dataset_name}_{mart_name}",
+                databricks_conn_id="databricks_default",
+                job_name="NYC TLC: Silver to Gold Pipeline",
+                job_parameters={
+                    "mart_name": mart_name,
+                    "silver_path": silver_path,
+                    "gold_path": f"s3a://{s3_bucket}/{s3_gold_prefix}/{mart_name}/",
+                    "table_name": mart_table_name,
+                    "partition_keys": "ano,mes",
+                    "partition_values": "{{ logical_date.strftime('%Y') }},{{ logical_date.strftime('%m') }}",
+                },
+            )
+            gold_tasks.append(gold_task)
+
+        if gold_tasks:
+            ingest_task >> raw_task >> silver_task >> gold_tasks
+        else:
+            ingest_task >> raw_task >> silver_task
