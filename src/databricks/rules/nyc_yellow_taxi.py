@@ -9,11 +9,11 @@ from rules.base_rule import TransformationRule
 
 
 class NYCYellowTaxiRule(TransformationRule):
-"""
-Regra de transformação para o dataset NYC TLC Yellow Taxi.
+    """
+    Regra de transformação para o dataset NYC TLC Yellow Taxi.
 
-Aplica normalização de colunas, cast rigoroso de schema e filtros de qualidade de dados.
-"""
+    Aplica normalização de colunas, cast rigoroso de schema e filtros de qualidade de dados.
+    """
 
     def apply(self, df: DataFrame) -> DataFrame:
         """
